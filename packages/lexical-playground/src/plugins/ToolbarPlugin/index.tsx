@@ -45,6 +45,7 @@ import {
   $getNearestNodeOfType,
   mergeRegister,
 } from '@lexical/utils';
+import axios from 'axios';
 import {
   $createParagraphNode,
   $getNodeByKey,
@@ -821,6 +822,90 @@ export default function ToolbarPlugin({
     activeEditor.dispatchCommand(INSERT_IMAGE_COMMAND, payload);
   };
 
+  const changeRes = async () => {
+    const textContent = editor
+      .getEditorState()
+      .read(() => $getSelection()?.getTextContent());
+    const parentText = editor
+      .getEditorState()
+      .read(() => $getSelection()?.getCachedNodes()?.pop()?.__text);
+
+    const onlyWhitespace = (text: string) => /^\s*$/.test(text);
+
+    const inputElement = document.getElementById('myInput') as HTMLInputElement;
+
+    const inputValue = inputElement.value;
+    const minLength = 2;
+    const maxLength = 4000;
+    if (onlyWhitespace(inputValue) === true) {
+return alert('please add text');
+}
+    if (inputValue && inputValue.length <= minLength) {
+      return alert(`Select more than ${minLength} characters`);
+    }
+    if (textContent && textContent.length >= maxLength) {
+      return alert(`Select less than ${maxLength} characters`);
+    }
+
+    const prompt = `You are an AI assistant designed to modify existing text based on user instructions. To complete this task, please follow these steps:
+    
+    1. Review the provided context, which includes the entire original text. This will help you understand the context surrounding the selected text that needs to be modified.
+    
+    Original text:
+    
+    ${parentText}
+    
+    2. Identify the specific text that needs to be modified. If no text is selected, the text you respond will be inserted to the location of the cursor.
+    
+    Selected text to modify:
+    
+    ${textContent || ''}
+    
+    3. Carefully read and understand the user's instructions for modifying the selected text.
+    
+    User instructions:
+    
+    ${inputValue}
+    
+    4. Generate new text that replaces the selected text while adhering to the user's instructions. Your response should only contain the new replacement text, without any additional explanation or commentary.
+    
+    Please provide your response now, replacing the selected text with the newly generated text based on the user's instructions.
+`;
+
+    const requestBody = {
+      messages: [{content: prompt, role: 'user'}],
+      model: 'gpt-3.5-turbo',
+      temperature: 0.7,
+    };
+
+    let responseText = '';
+    try {
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions?model=gpt-3.5-turbo',
+        requestBody,
+        {
+          headers: {
+            Authorization:
+              'Bearer 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',
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      responseText = response.data.choices[0].message.content;
+    } catch (error) {
+      console.error('Error:', error);
+      alert(
+        'There is something wrong with your request please try again later',
+      );
+    }
+
+    // Use the result within editor.update()
+    editor.update(() => {
+      const selection = $getSelection();
+      selection?.insertRawText(responseText);
+    });
+  };
+
   return (
     <div className="toolbar">
       <button
@@ -1192,6 +1277,12 @@ export default function ToolbarPlugin({
       />
 
       {modal}
+      {/* <div> */}
+      <input id="myInput" placeholder="Add your prompt" />
+      <button className="myButton" onClick={changeRes}>
+        Generate
+      </button>
+      {/* </div> */}
     </div>
   );
 }
