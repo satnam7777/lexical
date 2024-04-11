@@ -10,8 +10,8 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const lightCodeTheme = require('prism-react-renderer/themes/github');
-const darkCodeTheme = require('prism-react-renderer/themes/dracula');
+const {github: lightCodeTheme, dracula: darkCodeTheme} =
+  require('prism-react-renderer').themes;
 const importPlugin = require('remark-import-partial');
 
 const TITLE = 'Lexical';
@@ -24,7 +24,9 @@ const config = {
 
   favicon: 'img/favicon.ico',
 
-  onBrokenLinks: 'throw',
+  markdown: {format: 'md'},
+
+  onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
   organizationName: 'facebook',
   plugins: [
@@ -36,6 +38,7 @@ const config = {
           '../lexical/src/index.ts',
           '../lexical-clipboard/src/index.ts',
           '../lexical-code/src/index.ts',
+          '../lexical-devtools-core/src/index.ts',
           '../lexical-dragon/src/index.ts',
           '../lexical-file/src/index.ts',
           '../lexical-hashtag/src/index.ts',
@@ -183,7 +186,6 @@ const config = {
             to: 'https://playground.lexical.dev/',
           },
           {
-            docId: 'intro',
             label: 'Docs',
             position: 'left',
             sidebarId: 'docs',

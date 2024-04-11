@@ -49,6 +49,7 @@ const closureOptions = {
 const wwwMappings = {
   '@lexical/clipboard': 'LexicalClipboard',
   '@lexical/code': 'LexicalCode',
+  '@lexical/devtools-core': 'LexicalDevtoolsCore',
   '@lexical/dragon': 'LexicalDragon',
   '@lexical/file': 'LexicalFile',
   '@lexical/hashtag': 'LexicalHashtag',
@@ -69,7 +70,21 @@ const wwwMappings = {
   '@lexical/utils': 'LexicalUtils',
   '@lexical/yjs': 'LexicalYjs',
   lexical: 'Lexical',
+  'prismjs/components/prism-c': 'prism-c',
+  'prismjs/components/prism-clike': 'prism-clike',
   'prismjs/components/prism-core': 'prismjs',
+  'prismjs/components/prism-cpp': 'prism-cpp',
+  'prismjs/components/prism-css': 'prism-css',
+  'prismjs/components/prism-java': 'prism-java',
+  'prismjs/components/prism-javascript': 'prism-javascript',
+  'prismjs/components/prism-markdown': 'prism-markdown',
+  'prismjs/components/prism-markup': 'prism-markup',
+  'prismjs/components/prism-objectivec': 'prism-objectivec',
+  'prismjs/components/prism-python': 'prism-python',
+  'prismjs/components/prism-rust': 'prism-rust',
+  'prismjs/components/prism-sql': 'prism-sql',
+  'prismjs/components/prism-swift': 'prism-swift',
+  'prismjs/components/prism-typescript': 'prism-typescript',
   'react-dom': 'ReactDOMComet',
 };
 
@@ -117,6 +132,7 @@ const externals = [
   '@lexical/table',
   '@lexical/file',
   '@lexical/clipboard',
+  '@lexical/devtools-core',
   '@lexical/hashtag',
   '@lexical/headless',
   '@lexical/html',
@@ -274,7 +290,7 @@ async function build(name, inputFile, outputPath, outputFile, isProd, format) {
       },
     ],
     // This ensures PrismJS imports get included in the bundle
-    treeshake: isWWW || name !== 'Lexical Code' ? 'smallest' : undefined,
+    treeshake: name !== 'Lexical Code' ? 'smallest' : false,
   };
   const outputOptions = {
     esModule: false,
@@ -474,6 +490,18 @@ const packages = [
     outputPath: './packages/lexical-dragon/dist/',
     packageName: 'lexical-dragon',
     sourcePath: './packages/lexical-dragon/src/',
+  },
+  {
+    modules: [
+      {
+        outputFileName: 'LexicalDevtoolsCore',
+        sourceFileName: 'index.ts',
+      },
+    ],
+    name: 'Lexical Devtools Core',
+    outputPath: './packages/lexical-devtools-core/dist/',
+    packageName: 'lexical-devtools-core',
+    sourcePath: './packages/lexical-devtools-core/src/',
   },
   {
     modules: [
