@@ -546,6 +546,9 @@ export default function ToolbarPlugin({
   const [isRTL, setIsRTL] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState<string>('');
   const [isEditable, setIsEditable] = useState(() => editor.isEditable());
+  const [transcript, setTranscript] = useState<string[]>([]);
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const $updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -850,8 +853,8 @@ export default function ToolbarPlugin({
     const minLength = 2;
     const maxLength = 4000;
     if (onlyWhitespace(inputValue) === true) {
-return alert('please add text');
-}
+      return alert('please add text');
+    }
     if (inputValue && inputValue.length <= minLength) {
       return alert(`Select more than ${minLength} characters`);
     }
@@ -917,6 +920,86 @@ return alert('please add text');
       selection?.insertRawText(responseText);
     });
   };
+
+  // Function to start recording and open WebSocket connection
+  const startRecording = async () => {
+    try {
+      const inputElement = document.getElementById('myInput') as HTMLInputElement;
+      const inputVal: string = inputElement.value;
+      setTranscript(inputVal.split(' '));
+
+      const streams = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+      const wss = new WebSocket('ws://localhost:3002');
+      setWs(wss);
+      setStream(streams);
+
+      wss.onopen = () => {
+        // console.log('WebSocket connection opened.');
+      };
+
+      wss.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === 'transcript') {
+          setTranscript((prevData) => [...prevData, message.data]);
+        }
+      };
+
+      wss.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        // Add error handling logic here if needed
+      };
+
+      const mediaRecorder = new MediaRecorder(streams);
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          wss.send(event.data);
+        }
+      };
+
+      mediaRecorder.start(1000); // Start recording with a 1-second chunk size
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      // Add error handling logic here if needed
+    }
+  };
+
+  // Function to close WebSocket connection
+  const stopRecording = () => {
+    if (ws) {
+      ws.close();
+      setWs(null); // Reset WebSocket state
+    }
+
+    // Check if there is an active media stream
+    if (stream) {
+      // Stop all tracks in the media stream
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
+    }
+  };
+
+  // Cleanup function to close WebSocket connection when component unmounts
+  useEffect(() => {
+    return () => {
+      if (ws) {
+        ws.close();
+        setWs(null); // Reset WebSocket state
+      }
+    };
+  }, [ws]);
+
+  useEffect(() => {
+    // Assuming 'transcript' is the state that holds the array of transcript data
+    const formattedTranscript = transcript
+      .filter((word: string) => word?.trim() !== '')
+      .join(' ');
+
+    const inputElement = document.getElementById('myInput') as HTMLInputElement;
+    inputElement.value = formattedTranscript || '';
+  }, [transcript]);
 
   return (
     <div className="toolbar">
@@ -1293,6 +1376,12 @@ return alert('please add text');
       <input id="myInput" placeholder="Add your prompt" />
       <button className="myButton" onClick={changeRes}>
         Generate
+      </button>
+      <button className="myButton" onClick={startRecording}>
+        start
+      </button>
+      <button className="myButton" onClick={stopRecording}>
+        stop
       </button>
       {/* </div> */}
     </div>
