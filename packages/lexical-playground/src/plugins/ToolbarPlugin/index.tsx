@@ -549,6 +549,7 @@ export default function ToolbarPlugin({
   const [transcript, setTranscript] = useState<string[]>([]);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isRecording, setIsRecording] = useState<boolean>(false);
 
   const $updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -924,14 +925,18 @@ export default function ToolbarPlugin({
   // Function to start recording and open WebSocket connection
   const startRecording = async () => {
     try {
-      const inputElement = document.getElementById('myInput') as HTMLInputElement;
+      const inputElement = document.getElementById(
+        'myInput',
+      ) as HTMLInputElement;
       const inputVal: string = inputElement.value;
       setTranscript(inputVal.split(' '));
 
       const streams = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
-      const wss = new WebSocket('ws://localhost:3002');
+      const wss = new WebSocket(
+        'ws://deepgram-sockets-production.up.railway.app',
+      );
       setWs(wss);
       setStream(streams);
 
@@ -967,6 +972,7 @@ export default function ToolbarPlugin({
 
   // Function to close WebSocket connection
   const stopRecording = () => {
+    setIsRecording(!isRecording);
     if (ws) {
       ws.close();
       setWs(null); // Reset WebSocket state
@@ -1000,6 +1006,45 @@ export default function ToolbarPlugin({
     const inputElement = document.getElementById('myInput') as HTMLInputElement;
     inputElement.value = formattedTranscript || '';
   }, [transcript]);
+
+  useEffect(() => {
+    // Check if ws is not null and call stopRecording
+    if (ws) {
+      stopRecording();
+    }
+  }, [isRecording]);
+
+  useEffect(() => {
+    let isRecordingStarted = false; // Flag to track if recording has started
+
+    const handleKeyDown = (event) => {
+      // Check if Ctrl + B is pressed and recording has not started yet
+      if (event.ctrlKey && event.key === 'b' && !isRecordingStarted) {
+        //  setIsRecording(true); // Start recording
+        startRecording();
+        isRecordingStarted = true; // Set flag to true to prevent multiple calls
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      // Check if Ctrl + B is released
+      if (event.key === 'b') {
+        //  setIsRecording(false); // Stop recording
+        stopRecording();
+        isRecordingStarted = false; // Reset flag to allow function to be called again
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+
+    // Remove event listeners on component unmount
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
 
   return (
     <div className="toolbar">
@@ -1372,18 +1417,10 @@ export default function ToolbarPlugin({
       />
 
       {modal}
-      {/* <div> */}
       <input id="myInput" placeholder="Add your prompt" />
       <button className="myButton" onClick={changeRes}>
         Generate
       </button>
-      <button className="myButton" onClick={startRecording}>
-        start
-      </button>
-      <button className="myButton" onClick={stopRecording}>
-        stop
-      </button>
-      {/* </div> */}
     </div>
   );
 }
